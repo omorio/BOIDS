@@ -8,13 +8,11 @@ def getDistance(v1, v2): # recieves two vectors and finds the distance between t
 	return sqrt((v1.x - v2.x)**2 + (v1.y - v2.y)**2)
 
 def SubVectors(v1, v2): #recieve two vectors and substract them.
-	return Vec(v1.x - v2.x, v1.y - v2.y)
+	return pygame.Vector2(v1.x - v2.x, v1.y - v2.y)
 
 def dotProduct(v1, v2):
-	return v1.x*v2.x + v1.y * v2.y
+	return v1.angle_to(v2)
 
-def crossProduct(v1):
-	return Vec(v1.y, -v1.x)
 
 def makeBound(x, lower, upper):
 	if x < lower:
@@ -40,6 +38,12 @@ def mouseInBound(rect, pos):
 			return False
 	else: 
 		return False
+
+def rotate_points_around_pivot(points, pivot, angle):
+    pp = pygame.math.Vector2(pivot)
+    rotated_points = [
+        (pygame.math.Vector2(x, y) - pp).rotate(angle) + pp for x, y in points]
+    return rotated_points
 
 class Vec:
 	def __init__(self, x=0, y=0):

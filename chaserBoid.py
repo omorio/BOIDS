@@ -5,7 +5,8 @@ from random import uniform
 from matrix import *
 from UI import *
  
-
+width = 2560
+height = 1440
 
 class ChaserBoid: 
     def __init__(self, x, y):
