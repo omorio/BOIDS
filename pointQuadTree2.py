@@ -57,11 +57,11 @@ class QuadTree(object):
         return found
 
     def draw(self, window, color=(128,128,128)):
-        pygame.draw.rect(window, color, self.boundary, 2)
+        pygame.draw.rect(window, color, self.boundary, 1)
         if(self.split):
-            self.nwQT.draw(window, (0,128,0))
-            self.neQT.draw(window, (0,0,128))
-            self.swQT.draw(window, (128,0,128))
-            self.seQT.draw(window, (128,128,0))
+            self.nwQT.draw(window, (255,255,255))
+            self.neQT.draw(window, (255,255,255))
+            self.swQT.draw(window, (255,255,255))
+            self.seQT.draw(window, (255,255,255))
         
 #comment

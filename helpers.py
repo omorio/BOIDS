@@ -45,6 +45,10 @@ def rotate_points_around_pivot(points, pivot, angle):
         (pygame.math.Vector2(x, y) - pp).rotate(angle) + pp for x, y in points]
     return rotated_points
 
+def num_to_range(num, inMin, inMax, outMin, outMax):
+	return outMin + (float(num - inMin) / float(inMax - inMin) * (outMax
+			- outMin))
+
 class Vec:
 	def __init__(self, x=0, y=0):
 		self.x = x
@@ -117,3 +121,6 @@ class Vec:
 
 	def __repr__(self):
 		return f'vector-> x:{self.x}, y:{self.y}'
+	
+
+
