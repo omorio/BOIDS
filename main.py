@@ -94,11 +94,11 @@ while running:
     for boid in flock:
         quadTree.insert(boid)
     for boid in flock:
+        boid.values = {"separation": sep, "alignment": align, "cohesion": coh}
         boid.behaviour(quadTree)
         boid.edges(avoidEdges, margin, turnFactor)
         boid.update(dragCoeff)
         boid.draw(window)
-        boid.values = {"separation": sep, "alignment": align, "cohesion": coh}
 
     uiWindow.draw(window, visibleUI, debugVisible, quadTree, flock)
     pygame_widgets.update(events)
