@@ -1,12 +1,12 @@
 import pygame
-import pygame_widgets
 from pygame_widgets.slider import Slider
 from pygame_widgets.toggle import Toggle
-from pygame_widgets.button import Button
 
 initialSep = 2.0
 initialAlign = 0.55
 initialCoh = 0.25
+
+clock = pygame.time.Clock()
 
 class UI:
     def __init__(self, window, width, height):
@@ -18,6 +18,7 @@ class UI:
         self.rectMid = self.rect.x + self.rightPadding/6
         self.UIbackground = pygame.Surface((self.width/5, 8*self.height/10), pygame.SRCALPHA | pygame.FULLSCREEN)
         self.widgetList = []
+        self.debugWidgetList = []
 #Sliders and text for boids----------------------------------------------------------------------------------
         self.sliderSep = Slider(window, self.rectMid, self.rect.y+self.widgetSpacing, self.rightPadding, 20, 
                                 min=0, max=3, step=0.01, initial=initialSep)
@@ -30,7 +31,7 @@ class UI:
         self.sliderBoidCount = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing * 5, self.rightPadding, 20, 
                                 min=0, max=5000, step=1, initial=1000)
         self.sliderDrag = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing * 6, self.rightPadding, 20, 
-                                min=0, max=0.1, step=0.01, initial=0.08)
+                                min=0, max=0.1, step=0.01, initial=0.04)
 
         self.font = pygame.font.SysFont(None, 24)
 
@@ -50,60 +51,54 @@ class UI:
 
 #Toggles and text--------------------------------------------------------------------------------------------
         self.edgesToggle = Toggle(window, int(self.rectMid), self.rect.y+self.widgetSpacing*7, 20, 10, 
-                                  startOn=True, onColour=(0,234,0), handleOnColour=(255,255,255), handleOffColour=(255,255,255))
+                                    startOn=True, onColour=(0,234,0), handleOnColour=(255,255,255), handleOffColour=(255,255,255))
         self.debugToggle = Toggle(window, int(self.rectMid), self.rect.y+self.widgetSpacing*8, 20, 10, 
-                                  startOn=False, onColour=(0,234,0), handleOnColour=(255,255,255), handleOffColour=(255,255,255))
+                                    startOn=False, onColour=(0,234,0), handleOnColour=(255,255,255), handleOffColour=(255,255,255))
+        self.debugToggleVRect = Toggle(window, int(self.rectMid), self.rect.y+self.widgetSpacing*9, 20, 10, 
+                                    startOn=False, onColour=(0,234,0), handleOnColour=(255,255,255), handleOffColour=(255,255,255))
+        self.debugToggleQuadTree = Toggle(window, int(self.rectMid), self.rect.y+self.widgetSpacing*10, 20, 10, 
+                                    startOn=False, onColour=(0,234,0), handleOnColour=(255,255,255), handleOffColour=(255,255,255))
+        self.debugToggleParams = Toggle(window, int(self.rectMid), self.rect.y+self.widgetSpacing*11, 20, 10, 
+                                    startOn=False, onColour=(0,234,0), handleOnColour=(255,255,255), handleOffColour=(255,255,255))
 
         self.edgesText = self.font.render('Avoid edges', True, (255, 255, 255))
         self.debugText = self.font.render('Show debug info', True, (255, 255, 255))
+        self.debugTextVRect = self.font.render('Show vision radius of each boid', True, (255, 255, 255))
+        self.debugTextQuadTree = self.font.render('Show quad tree', True, (255, 255, 255))
+        self.debugTextParams = self.font.render('Show FPS and Boid count', True, (255, 255, 255))
 
         self.widgetList.append((self.edgesText, (self.rectMid+self.rectMid*0.05, self.edgesToggle._y)))
         self.widgetList.append((self.debugText, (self.rectMid+self.rectMid*0.05, self.debugToggle._y)))
-#Sliders and text for chaser boids---------------------------------------------------------------------------
-        #self.chaserSliderSep = Slider(window, self.rectMid, self.rect.y+self.widgetSpacing*7, self.rightPadding, 20, 
-        #                        min=0, max=1, step=0.01, initial=initialSep)
-        #self.chaserSliderAlign = Slider(window, self.rectMid, self.rect.y+self.widgetSpacing*8, self.rightPadding, 20, 
-        #                          min=0, max=1, step=0.01, initial=initialAlign)
-        #self.chaserSliderCoh = Slider(window, self.rectMid, self.rect.y+self.widgetSpacing*9, self.rightPadding, 20, 
-        #                        min=0, max=1, step=0.01, initial=initialCoh)
-        #self.chaserSliderRad = Slider(window, self.rectMid, self.rect.y+self.widgetSpacing*10, self.rightPadding, 20, 
-        #                        min=40, max=200, step=2, initial=125)
-        
-        #self.ChaserSepText = self.font.render('Chaser Seperation', True, (255,255,255))
-        #self.ChaserAlignText = self.font.render('Chaser Alignment', True, (255,255,255))
-        #self.ChaserCohText = self.font.render('Chaser Cohesion', True, (255,255,255))
-        #self.ChaserRadText = self.font.render('Chaser Vision radius', True, (255,255,255))
+        self.debugWidgetList.append((self.debugTextVRect, (self.rectMid+self.rectMid*0.05, self.debugToggleVRect._y)))
+        self.debugWidgetList.append((self.debugTextQuadTree, (self.rectMid+self.rectMid*0.05, self.debugToggleQuadTree._y)))
+        self.debugWidgetList.append((self.debugTextParams, (self.rectMid+self.rectMid*0.05, self.debugToggleParams._y)))
 
-        #self.widgetList.append((self.ChaserSepText, (self.rectMid, self.chaserSliderSep._y-20)))
-        #self.widgetList.append((self.ChaserAlignText, (self.rectMid, self.chaserSliderAlign._y-20)))
-        #self.widgetList.append((self.ChaserCohText, (self.rectMid, self.chaserSliderCoh._y-20)))
-        #self.widgetList.append((self.ChaserRadText, (self.rectMid, self.chaserSliderRad._y-20)))
+        self.debugToggleVRect.hide()
+        self.debugToggleQuadTree.hide()
+        self.debugToggleParams.hide()
 
-#Button to delete chasers------------------------------------------------------------------------------------
-        #self.delChaserButton = Button(
-        #    # Mandatory Parameters
-        #    window,  # Surface to place button on
-        #    self.rectMid,  # X-coordinate of top left corner
-        #    self.rect.y+self.widgetSpacing*11,  # Y-coordinate of top left corner
-        #    self.rightPadding,  # Width
-        #    50,  # Height
 
-        #    # Optional Parameters
-        #    text='Delete Chasers',  # Text to display
-        #    fontSize=30,  # Size of font
-        #    margin=20,  # Minimum distance between text/image and edge of button
-        #    inactiveColour=(230, 230, 230),  # Colour of button when not being interacted with
-        #    hoverColour=(200, 200, 200),  # Colour of button when being hovered over
-        #    pressedColour=(230, 230, 230),  # Colour of button when being clicked
-        #    radius=5,  # Radius of border corners (leave empty for not curved)
+    def draw(self, window, visibleUI, debugVisible, quadTree, flock):
 
-        #    )
+        if self.debugToggleQuadTree.value:
+            quadTree.draw(window)
 
-    
-    def draw(self, window, visible, visibleMargin, margin):
-        if visible:
-            if visibleMargin:
-                pygame.draw.rect(window, "red", pygame.Rect(margin, margin , self.width - margin*2, self.height - margin), 2)
+        if self.debugToggleVRect.value:
+            pygame.draw.rect(window, "white", flock[-1].rect, 2)
+            pygame.draw.rect(window, "white", flock[-1].vRect, 2)   
+
+        if self.debugToggleParams.value:
+            if len(flock) != 0:
+                pygame.font.init()
+                font = pygame.font.SysFont(None, 24)
+                fpsStr = str(int(clock.get_fps()))
+                fps = font.render(fpsStr, True, (255, 255, 255))
+                boidCountStr = str(len(flock))
+                boidCount = font.render(boidCountStr, True, (255, 255, 255))
+                window.blit(fps, (window.get_width() - 50, 50))
+                window.blit(boidCount, (window.get_width() - 100, 50))
+
+        if visibleUI:
             self.UIbackground.fill((100,100,100,128))
             window.blit(self.UIbackground, self.rect)
             self.sliderSep.show()
@@ -116,18 +111,19 @@ class UI:
             self.edgesToggle.show()
             self.debugToggle.show()
 
-            #self.chaserSliderSep.show()
-            #self.chaserSliderAlign.show()
-            #self.chaserSliderCoh.show()
-            #self.chaserSliderRad.show()
-
-            #self.delChaserButton.show()
-
             window.blits(self.widgetList)
-            
-        else: 
-            #if visibleMargin:
-                #pygame.draw.rect(window, "red", pygame.Rect(margin*8, margin*8 , self.width - margin*2*8, self.height - margin*2*8), 2)
+
+            if debugVisible:
+                window.blits(self.debugWidgetList)
+                self.debugToggleVRect.show()
+                self.debugToggleQuadTree.show()
+                self.debugToggleParams.show()
+            else:
+                self.debugToggleVRect.hide()
+                self.debugToggleQuadTree.hide()
+                self.debugToggleParams.hide()
+
+        else:
             self.sliderSep.hide()
             self.sliderAlign.hide()
             self.sliderCoh.hide()
@@ -137,11 +133,8 @@ class UI:
 
             self.edgesToggle.hide()
             self.debugToggle.hide()
-        
-            #self.chaserSliderSep.hide()
-            #self.chaserSliderAlign.hide()
-            #self.chaserSliderCoh.hide()
-            #self.chaserSliderRad.hide()
-
-            #self.delChaserButton.hide()
+            self.debugToggleVRect.hide()
+            self.debugToggleQuadTree.hide()
+            self.debugToggleParams.hide()
+    
 

@@ -1,17 +1,19 @@
-from pointQuadTree2 import QuadTree
 from random import uniform
-from chaserBoid import *
-from boid import *
-from UI import *
+import pygame_widgets
 import pygame
+from UI import UI
+from boid import Boid, WIDTH, HEIGHT
+from helpers import mouseInBound
+from pointQuadTree2 import QuadTree
 
+# TODO: replace blob with traingele and rotate triangle around pivot
+# TODO: implement vision cone instead of the vision being a square.
+# TODO: Add toggle for grouping of boids.
 
 buttonClick = False
-
-
 pygame.init()
-capacity = 8
-window = pygame.display.set_mode((width, height), pygame.FULLSCREEN)
+CAPACITY = 8
+window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 running = True
 avoidEdges = True
@@ -20,22 +22,15 @@ turnFactor = 0.6
 margin = 20
 flock = []
 
-# TODO: implement vision cone instead of the vision being a square.
-# TODO: Add toggle for grouping of boids.
 
 quadTree = QuadTree(
-    window.get_rect(), capacity
+    window.get_rect(), CAPACITY
 )  # put boids in quadTree for easy lookup.
 
-for i in range(1000):
-    boid = Boid(uniform(width / 8, 7 * width / 8), uniform(height / 8, 7 * height / 8), i)
-    flock.append(boid)
-    quadTree.insert(boid)
-
 # for i in range(2):
-# chaserFlock.append(ChaserBoid(uniform(width/4, 3*width/4), uniform(height/4, 3*height/4)))
+# chaserFlock.append(ChaserBoid(uniform(WIDTH/4, 3*WIDTH/4), uniform(HEIGHT/4, 3*HEIGHT/4)))
 spawn = False
-uiWindow = UI(window, width, height)
+uiWindow = UI(window, WIDTH, HEIGHT)
 while running:
     # fill the screen with a color to wipe away anything from last frame
     # window.fill((25,25,25))
@@ -52,7 +47,7 @@ while running:
     dragCoeff = uiWindow.sliderDrag.getValue()
 
     avoidEdges = uiWindow.edgesToggle.getValue()
-    visibleDebug = uiWindow.debugToggle.getValue()
+    debugVisible = uiWindow.debugToggle.getValue()
 
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
@@ -90,40 +85,22 @@ while running:
         pass
     elif boidCount > len(flock):
         while boidCount > len(flock):
-            flock.append(Boid(uniform(0, width), uniform(0, height), len(flock) + 1))
+            flock.append(Boid(uniform(0, WIDTH), uniform(0, HEIGHT), len(flock) + 1))
     elif boidCount < len(flock):
         while boidCount < len(flock):
             flock.pop()
 
-    quadTree = QuadTree(window.get_rect(), capacity)
+    quadTree = QuadTree(window.get_rect(), CAPACITY)
     for boid in flock:
         quadTree.insert(boid)
     for boid in flock:
         boid.behaviour(quadTree)
         boid.edges(avoidEdges, margin, turnFactor)
         boid.update(dragCoeff)
-        boid.draw(window, 5, 40)
+        boid.draw(window)
         boid.values = {"separation": sep, "alignment": align, "cohesion": coh}
 
-    if visibleDebug:
-        quadTree.draw(window)
-        if len(flock) != 0:
-            pygame.draw.rect(window, "white", flock[-1].rect, 2)
-            pygame.draw.rect(window, "white", flock[-1].vRect, 2)
-
-    pygame.font.init()
-    font = pygame.font.SysFont(None, 24)
-
-    fpsString = str(int(clock.get_fps()))
-    fps = font.render(fpsString, True, (255, 255, 255))
-
-    boidCountStr = str(len(flock))
-    boidCount = font.render(boidCountStr, True, (255, 255, 255))
-
-    window.blit(fps, (window.get_width() - 50, 50))
-    window.blit(boidCount, (window.get_width() - 100, 50))
-
-    uiWindow.draw(window, visibleUI, visibleDebug, margin)
+    uiWindow.draw(window, visibleUI, debugVisible, quadTree, flock)
     pygame_widgets.update(events)
     pygame.display.update()
     pygame.display.flip()

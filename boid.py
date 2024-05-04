@@ -1,17 +1,15 @@
-from math import pi
-from helpers import num_to_range, getDistance, SubVectors, makeBound
 from random import uniform, randint
-from UI import *
 import colorsys
 import pygame
+from helpers import num_to_range, getDistance, SubVectors, makeBound
 
 
 
-height = 1964
-width = 3024
+HEIGHT = 1964
+WIDTH = 3024
 
 class Boid:
-    def __init__(self, x, y, id):
+    def __init__(self, x, y, boidID):
         self.position = pygame.Vector2(x, y)
         vel_x = uniform(-2, 2)
         vel_y = uniform(-2, 2)
@@ -22,8 +20,8 @@ class Boid:
         self.size = 2
         self.angle = 0
         self.lineThicknes = 2
-        self.radius = 4  # Radius of blob
-        self.vRadius = 60  # Vision square width and height.
+        self.radius = 6  # Radius of blob
+        self.vRadius = 60  # Vision square WIDTH and HEIGHT.
         self.vRect = pygame.Rect(  # defines the vision area.
             self.position.x - self.vRadius / 2,
             self.position.y - self.vRadius / 2,
@@ -37,13 +35,11 @@ class Boid:
             self.radius,
         )
         self.neighbours = []
-        self.id = id
+        self.boidID = boidID
         self.colorID = randint(5, 5)
         velToHue = num_to_range(self.velocity.magnitude(),0,4,0,360)
-        #(255, 255, 255)  # (uniform(100,200), 0 ,uniform(100,200))
         self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 100 / 255.0, 100 / 255.0) #Need to normalize the colors
         self.color = (int (round (self.color[0] * 255)), int (self.color[1] * 255), int (self.color[2] * 255))
-        self.toggles = {"separation": True, "alignment": True, "cohesion": True}
         self.values = {"separation": 1, "alignment": 1, "cohesion": 1}
 
         if self.colorID == 1:
@@ -70,13 +66,13 @@ class Boid:
         if avoid:
             if self.position.x < margin:
                 self.velocity.x += turnFactor * ((margin - self.position.x) * 0.05)
-            if self.position.y > height - margin:
+            if self.position.y > HEIGHT - margin:
                 self.velocity.y += turnFactor * (
-                    (height - margin - self.position.y) * 0.05
+                    (HEIGHT - margin - self.position.y) * 0.05
                 )
-            if self.position.x > width - margin:
+            if self.position.x > WIDTH - margin:
                 self.velocity.x += turnFactor * (
-                    (width - margin - self.position.x) * 0.05
+                    (WIDTH - margin - self.position.x) * 0.05
                 )
             if self.position.y < margin:
                 self.velocity.y += turnFactor * ((margin - self.position.y) * 0.05)
@@ -87,35 +83,32 @@ class Boid:
                 # then calculate the angle between velocity vect and boundary and steer by a small fraction of this angle.
                 # the dot product help determine if to move in the positive or negative direction.
         else:
-            if self.position.x > width:
+            if self.position.x > WIDTH:
                 self.position.x = 0
             elif self.position.x < 0:
-                self.position.x = width
+                self.position.x = WIDTH
 
-            if self.position.y > height:
+            if self.position.y > HEIGHT:
                 self.position.y = 0
             elif self.position.y < 0:
-                self.position.y = height
+                self.position.y = HEIGHT
 
     def behaviour(self, quadTree):
         self.acceleration.update(0, 0)
-        self.neighbours = quadTree.hit(self.vRect)  # do once only in the behavior funciton and then pass it into the 3 diff funcs
-        if len(self.neighbours) != 0:
-            if self.toggles["alignment"] == True:
-                align = self.alignment(self.neighbours) * 0.8
-                align = align * self.values["alignment"]
-                self.acceleration += align
+        self.neighbours = quadTree.findInRect(self.vRect)
+        if not self.neighbours is None:
+            align = self.alignment(self.neighbours) * 0.8
+            align = align * self.values["alignment"]
+            self.acceleration += align
 
-            if self.toggles["cohesion"] == True:
-                coh = self.cohesion(self.neighbours) * 0.8
-                coh = coh * self.values["cohesion"]
-                self.acceleration += coh
+            coh = self.cohesion(self.neighbours) * 0.8
+            coh = coh * self.values["cohesion"]
+            self.acceleration += coh
 
-            if self.toggles["separation"] == True:
-                sep = self.separation(self.neighbours) * 0.8
-                sep = sep * self.values["separation"]
-                self.acceleration += sep
-            
+            sep = self.separation(self.neighbours) * 0.8
+            sep = sep * self.values["separation"]
+            self.acceleration += sep
+
 
     def cohesion(self, neighbours):
         total = 0
@@ -123,7 +116,7 @@ class Boid:
 
         for buddy in neighbours:
             dist = getDistance(self.position, buddy.position)
-            if buddy is not self and dist < self.vRadius and self.colorID == buddy.colorID:
+            if buddy is not self and self.vRadius/4 < dist < self.vRadius and self.colorID == buddy.colorID:
                 steering += buddy.position
 
                 total += 1
@@ -189,12 +182,12 @@ class Boid:
                     steering = steering.normalize()
 
         return steering
-    
+
     def update(self, dragCoeff):
         # increases the boids vision if it cant see any flock members, decrease if it can see more than 3
-        if len(self.neighbours) != 0:
+        if not self.neighbours is None:
             buddyCount = 0
-            for boid in self.neighbours:
+            for boid in self.neighbours: # pop all self.neighbours who are of the same flock and then get.
                 if self.colorID == boid.colorID:
                     buddyCount += 1
 
@@ -202,7 +195,7 @@ class Boid:
                 if self.vRadius < 120:
                     self.vRadius += 10
             elif buddyCount > 3 and buddyCount <= 6:
-                pass  # if the boid has between 3 and 5 buddies it doesnt change its vision
+                pass  # if the boid sees between 3 and 6 of his flock members it doesnt change its vision
             else:
                 if self.vRadius > 30:
                     self.vRadius -= 10
@@ -210,17 +203,16 @@ class Boid:
             if self.vRadius < 120:
                 self.vRadius += 10
 
-        
+
         # update the possitional values of the boid
         self.velocity = pygame.Vector2(self.velocity.x * (1-dragCoeff), self.velocity.y * (1-dragCoeff))
-        print(self.velocity.magnitude())
         self.position += self.velocity
         self.velocity = self.velocity + self.acceleration
         self.velocity = self.velocity.clamp_magnitude(self.min_speed, self.max_speed)
-        
+
         # Map velocity to hue of boid
-        velToHue = num_to_range(self.velocity.magnitude(), 0, self.max_speed, 0, 360)
-        self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 150 / 255.0, 255 / 255.0) #Need to normalize the colors
+        velToHue = num_to_range(self.velocity.magnitude(), 0, self.max_speed, 100, 360)
+        self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 115 / 255.0, 255 / 255.0) #Need to normalize the colors
         self.color = (int (round (self.color[0] * 255)), int (round (self.color[1] * 255)), int (round (self.color[2] * 255)))
         self.vRect = pygame.Rect(
             self.position.x - self.vRadius / 2,
@@ -235,32 +227,30 @@ class Boid:
             self.radius,
         )
 
-    def draw(self, window, distance, scale):
+    def draw(self, window):
         pygame.draw.circle(
             window,
             self.color,
             (
-                makeBound(self.position.x, 0, width),
-                makeBound(self.position.y, 0, height),
+                makeBound(self.position.x, 0, WIDTH),
+                makeBound(self.position.y, 0, HEIGHT),
             ),
             self.radius,
         )
 
-        p1 = pygame.Vector2(self.position.x + self.radius * 3, self.position.y)
-        p2 = pygame.Vector2(p1.x - self.radius * 3, p1.y - self.radius)
-        p3 = pygame.Vector2(p2.x, p2.y + self.radius)
-        p4 = pygame.Vector2(p3.x, p3.y + self.radius)
-        p5 = p1
+        #p1 = pygame.Vector2(self.position.x + self.radius * 3, self.position.y)
+        #p2 = pygame.Vector2(p1.x - self.radius * 3, p1.y - self.radius)
+        #p3 = pygame.Vector2(p2.x, p2.y + self.radius)
+        #p4 = pygame.Vector2(p3.x, p3.y + self.radius)
+        #p5 = p1
 
         #triangle = [p1, p2, p3, p4, p5]
 
         # pygame.math.Vector2()
 
         # rotate_points_around_pivot(triangle, p3, dotProduct(self.position, self.velocity)) 
-        
-        # pygame.draw.polygon(window, self.color, triangle)
 
-        # TODO: replace blob with traingele and rotate triangle around pivot
+        # pygame.draw.polygon(window, self.color, triangle)
 
         pygame.draw.aaline(
             window,
