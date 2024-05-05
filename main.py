@@ -6,38 +6,31 @@ from boid import Boid, WIDTH, HEIGHT
 from helpers import mouseInBound
 from pointQuadTree2 import QuadTree
 
-# TODO: replace blob with traingele and rotate triangle around pivot
-# TODO: implement vision cone instead of the vision being a square.
-# TODO: Add toggle for grouping of boids.
+# Ideas: implement vision cone instead of the vision being a square.
+# Ideas: Add toggle for grouping of boids.
 
-buttonClick = False
-pygame.init()
+# Disables constant should be UPPER_CASE message
+# pylint: disable=C0103
+
+MARGIN = 20
 CAPACITY = 8
-window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-clock = pygame.time.Clock()
-running = True
-avoidEdges = True
-visibleUI = True
-turnFactor = 0.6
-margin = 20
+EDGE_TURN_FACTOR = 0.6
 flock = []
-
-
-quadTree = QuadTree(
-    window.get_rect(), CAPACITY
-)  # put boids in quadTree for easy lookup.
-
-# for i in range(2):
-# chaserFlock.append(ChaserBoid(uniform(WIDTH/4, 3*WIDTH/4), uniform(HEIGHT/4, 3*HEIGHT/4)))
 spawn = False
-uiWindow = UI(window, WIDTH, HEIGHT)
-while running:
-    # fill the screen with a color to wipe away anything from last frame
-    # window.fill((25,25,25))
-    window.fill((15, 15, 15))
+running = True
+visibleUI = True
+avoidEdges = True
+buttonClick = False
 
-    # quadTree = QuadTree(flock, window, QTDepth, window.get_rect(), drawTree) # put boids in quadTree for easy lookup.
-    # quadTree = QuadTree(flock, window, window.get_rect(), True, capacity, QTDepth) # put boids in quadTree for easy lookup.
+pygame.init()
+clock = pygame.time.Clock()
+window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+quadTree = QuadTree(window.get_rect(), CAPACITY)
+uiWindow = UI(window, WIDTH, HEIGHT)
+
+while running:
+    # wipe away anything from last frame
+    window.fill((15, 15, 15))
 
     sep = uiWindow.sliderSep.getValue()
     align = uiWindow.sliderAlign.getValue()
@@ -45,13 +38,12 @@ while running:
     vRad = uiWindow.sliderRad.getValue()
     boidCount = uiWindow.sliderBoidCount.getValue()
     dragCoeff = uiWindow.sliderDrag.getValue()
-
+    behaviourValues = {"separation": sep, "alignment": align, "cohesion": coh, "drag": dragCoeff}
     avoidEdges = uiWindow.edgesToggle.getValue()
     debugVisible = uiWindow.debugToggle.getValue()
 
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
-
+    # Poll for events.
+    # Press the space bar to hide the UI
     events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
@@ -80,10 +72,7 @@ while running:
                 quadTree.insert(boid)
                 uiWindow.sliderBoidCount.setValue(boidCount + 1)
 
-
-    if boidCount == len(flock):
-        pass
-    elif boidCount > len(flock):
+    if boidCount > len(flock):
         while boidCount > len(flock):
             flock.append(Boid(uniform(0, WIDTH), uniform(0, HEIGHT), len(flock) + 1))
     elif boidCount < len(flock):
@@ -94,9 +83,8 @@ while running:
     for boid in flock:
         quadTree.insert(boid)
     for boid in flock:
-        boid.values = {"separation": sep, "alignment": align, "cohesion": coh}
-        boid.behaviour(quadTree)
-        boid.edges(avoidEdges, margin, turnFactor)
+        boid.behaviour(quadTree, behaviourValues)
+        boid.edges(avoidEdges, MARGIN, EDGE_TURN_FACTOR)
         boid.update(dragCoeff)
         boid.draw(window)
 

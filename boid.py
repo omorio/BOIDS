@@ -1,9 +1,7 @@
 from random import uniform, randint
 import colorsys
 import pygame
-from helpers import num_to_range, getDistance, SubVectors, makeBound
-
-
+from helpers import num_to_range, getDistance, SubVectors, makeBound,rotate_points_around_pivot, dotProduct # pylint: disable=W0611
 
 HEIGHT = 1964
 WIDTH = 3024
@@ -11,36 +9,22 @@ WIDTH = 3024
 class Boid:
     def __init__(self, x, y, boidID):
         self.position = pygame.Vector2(x, y)
-        vel_x = uniform(-2, 2)
-        vel_y = uniform(-2, 2)
-        self.velocity = pygame.Vector2(vel_x, vel_y)
+        self.velocity = pygame.Vector2(uniform(-2, 2), uniform(-2, 2))
         self.acceleration = pygame.Vector2()
-        self.min_speed = 1  # 1
-        self.max_speed = 6  # 3 was original
-        self.size = 2
-        self.angle = 0
-        self.lineThicknes = 2
+        self.minSpeed = 1
+        self.maxSpeed = 6
         self.radius = 6  # Radius of blob
-        self.vRadius = 60  # Vision square WIDTH and HEIGHT.
-        self.vRect = pygame.Rect(  # defines the vision area.
-            self.position.x - self.vRadius / 2,
-            self.position.y - self.vRadius / 2,
-            self.vRadius,
-            self.vRadius,
-        )
-        self.rect = pygame.Rect(
-            self.position.x - self.radius / 2,
-            self.position.y - self.radius / 2,
-            self.radius,
-            self.radius,
-        )
+        self.vRadius = 60  # Vision rectangle WIDTH and HEIGHT.
+        # defines the vision area.
+        self.vRect = pygame.Rect(self.position.x - self.vRadius / 2, self.position.y - self.vRadius / 2, self.vRadius, self.vRadius)
+        # Used to be found in the Quad Tree.
+        self.rect = pygame.Rect(self.position.x - self.radius / 2, self.position.y - self.radius / 2, self.radius, self.radius)
         self.neighbours = []
         self.boidID = boidID
         self.colorID = randint(5, 5)
         velToHue = num_to_range(self.velocity.magnitude(),0,4,0,360)
         self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 100 / 255.0, 100 / 255.0) #Need to normalize the colors
         self.color = (int (round (self.color[0] * 255)), int (self.color[1] * 255), int (self.color[2] * 255))
-        self.values = {"separation": 1, "alignment": 1, "cohesion": 1}
 
         if self.colorID == 1:
             self.color = (255, 150, 0)
@@ -58,7 +42,6 @@ class Boid:
             self.color = (255, 128, 255)
         if self.colorID == 8:
             self.color = (0, 0, 255)
-        # self.color = (255, 255, 255)
 
     def edges(
         self, avoid, margin, turnFactor
@@ -93,22 +76,21 @@ class Boid:
             elif self.position.y < 0:
                 self.position.y = HEIGHT
 
-    def behaviour(self, quadTree):
+    def behaviour(self, quadTree, values):
         self.acceleration.update(0, 0)
         self.neighbours = quadTree.findInRect(self.vRect)
         if not self.neighbours is None:
             align = self.alignment(self.neighbours) * 0.8
-            align = align * self.values["alignment"]
+            align = align * values["alignment"]
             self.acceleration += align
 
             coh = self.cohesion(self.neighbours) * 0.8
-            coh = coh * self.values["cohesion"]
+            coh = coh * values["cohesion"]
             self.acceleration += coh
 
             sep = self.separation(self.neighbours) * 0.8
-            sep = sep * self.values["separation"]
+            sep = sep * values["separation"]
             self.acceleration += sep
-
 
     def cohesion(self, neighbours):
         total = 0
@@ -126,7 +108,7 @@ class Boid:
             steering = steering - self.position
             if len(steering) != 0 and (steering.x != 0 and steering.y != 0):
                 steering = steering.normalize()
-            steering = steering * self.max_speed
+            steering = steering * self.maxSpeed
             steering = steering - self.velocity
             if len(steering) != 0 and (steering.x != 0 and steering.y != 0):
                 steering = steering.normalize()
@@ -148,7 +130,7 @@ class Boid:
         if total > 0:
             averageHeading = averageHeading / total
             averageHeading = averageHeading.normalize()
-            averageHeading = averageHeading * self.max_speed
+            averageHeading = averageHeading * self.maxSpeed
 
             averageHeading = averageHeading - self.velocity.normalize()
             averageHeading = averageHeading.normalize()
@@ -173,10 +155,10 @@ class Boid:
             steering = steering / total
             steering = steering.normalize()
             if danger:
-                steering = steering * (self.max_speed + 10)
+                steering = steering * (self.maxSpeed + 10)
                 steering = steering - self.velocity
             else:
-                steering = steering * self.max_speed
+                steering = steering * self.maxSpeed
                 steering = steering - self.velocity
                 if len(steering) != 0 and (steering.x != 0 and steering.y != 0):
                     steering = steering.normalize()
@@ -197,23 +179,23 @@ class Boid:
             elif buddyCount > 3 and buddyCount <= 6:
                 pass  # if the boid sees between 3 and 6 of his flock members it doesnt change its vision
             else:
-                if self.vRadius > 30:
+                if self.vRadius > 60:
                     self.vRadius -= 10
         else:
             if self.vRadius < 120:
                 self.vRadius += 10
 
-
         # update the possitional values of the boid
         self.velocity = pygame.Vector2(self.velocity.x * (1-dragCoeff), self.velocity.y * (1-dragCoeff))
         self.position += self.velocity
         self.velocity = self.velocity + self.acceleration
-        self.velocity = self.velocity.clamp_magnitude(self.min_speed, self.max_speed)
+        self.velocity = self.velocity.clamp_magnitude(self.minSpeed, self.maxSpeed)
 
         # Map velocity to hue of boid
-        velToHue = num_to_range(self.velocity.magnitude(), 0, self.max_speed, 100, 360)
-        self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 115 / 255.0, 255 / 255.0) #Need to normalize the colors
+        velToHue = num_to_range(self.velocity.magnitude(), 0, self.maxSpeed, 100, 360)
+        self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 115 / 255.0, 255 / 255.0) # Need to normalize the colors
         self.color = (int (round (self.color[0] * 255)), int (round (self.color[1] * 255)), int (round (self.color[2] * 255)))
+
         self.vRect = pygame.Rect(
             self.position.x - self.vRadius / 2,
             self.position.y - self.vRadius / 2,
@@ -228,38 +210,18 @@ class Boid:
         )
 
     def draw(self, window):
-        pygame.draw.circle(
-            window,
-            self.color,
-            (
-                makeBound(self.position.x, 0, WIDTH),
-                makeBound(self.position.y, 0, HEIGHT),
-            ),
-            self.radius,
-        )
+        pygame.draw.circle(window, self.color, (makeBound(self.position.x, 0, WIDTH), makeBound(self.position.y, 0, HEIGHT),),self.radius)
+        pygame.draw.aaline(window, self.color, (self.position.x, self.position.y), (self.position.x + self.velocity.x * 3, self.position.y + self.velocity.y * 3))
 
-        #p1 = pygame.Vector2(self.position.x + self.radius * 3, self.position.y)
+        # Uncomment the bellow lines to turn the boids into triangles instead
+
+        #p1 = pygame.Vector2(self.position.x + (self.radius * 3), self.position.y)
         #p2 = pygame.Vector2(p1.x - self.radius * 3, p1.y - self.radius)
         #p3 = pygame.Vector2(p2.x, p2.y + self.radius)
         #p4 = pygame.Vector2(p3.x, p3.y + self.radius)
         #p5 = p1
 
         #triangle = [p1, p2, p3, p4, p5]
+        #triangle = rotate_points_around_pivot(triangle, p3, dotProduct(pygame.Vector2(0,0), self.velocity))
 
-        # pygame.math.Vector2()
-
-        # rotate_points_around_pivot(triangle, p3, dotProduct(self.position, self.velocity)) 
-
-        # pygame.draw.polygon(window, self.color, triangle)
-
-        pygame.draw.aaline(
-            window,
-            self.color,
-            (self.position.x, self.position.y),
-            (
-                self.position.x + self.velocity.x * 2.5,
-                self.position.y + self.velocity.y * 2.5,
-            ),
-        )
-        # pygame.draw.polygon(window, self.color, boidEdges) #fills boid
-        # pygame.draw.polygon(window, self.color, boidEdges, self.lineThicknes) #draws outline of boid
+        #pygame.draw.polygon(window, self.color, triangle)
