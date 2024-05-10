@@ -76,9 +76,9 @@ class Boid:
             elif self.position.y < 0:
                 self.position.y = HEIGHT
 
-    def behaviour(self, quadTree, values):
+    def behaviour(self, neighbours, values):
         self.acceleration.update(0, 0)
-        self.neighbours = quadTree.findInRect(self.vRect)
+        self.neighbours = neighbours
         if not self.neighbours is None:
             align = self.alignment(self.neighbours) * 0.8
             align = align * values["alignment"]

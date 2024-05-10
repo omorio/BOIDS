@@ -77,10 +77,10 @@ class UI:
         self.debugToggleParams.hide()
 
 
-    def draw(self, window, visibleUI, debugVisible, quadTree, flock):
+    def draw(self, window, visibleUI, debugVisible, flock):
 
-        if self.debugToggleQuadTree.value:
-            quadTree.draw(window)
+        #if self.debugToggleQuadTree.value:
+         #   quadTree.draw(window)
 
         if self.debugToggleVRect.value:
             pygame.draw.rect(window, "white", flock[-1].rect, 2)

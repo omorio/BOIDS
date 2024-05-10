@@ -4,7 +4,7 @@ import pygame
 from UI import UI
 from boid import Boid, WIDTH, HEIGHT
 from helpers import mouseInBound
-from pointQuadTree2 import QuadTree
+from spatialHash import SpatialHash
 
 # Ideas: implement vision cone instead of the vision being a square.
 # Ideas: Add toggle for grouping of boids.
@@ -25,8 +25,8 @@ buttonClick = False
 pygame.init()
 clock = pygame.time.Clock()
 window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-quadTree = QuadTree(window.get_rect(), CAPACITY)
 uiWindow = UI(window, WIDTH, HEIGHT)
+spatialHash = SpatialHash(window, 16)
 
 while running:
     # wipe away anything from last frame
@@ -63,33 +63,43 @@ while running:
                 if mouseInBound(uiWindow.rect, pos):
                     boid = Boid(pos[0], pos[1], len(flock) + 1)
                     flock.append(boid)
-                    quadTree.insert(boid)
+                    #quadTree.insert(boid)
                     uiWindow.sliderBoidCount.setValue(boidCount + 1)
             else:
                 pos = pygame.mouse.get_pos()
                 boid = Boid(pos[0], pos[1], len(flock) + 1)
                 flock.append(boid)
-                quadTree.insert(boid)
+                #quadTree.insert(boid)
                 uiWindow.sliderBoidCount.setValue(boidCount + 1)
 
     if boidCount > len(flock):
         while boidCount > len(flock):
-            flock.append(Boid(uniform(0, WIDTH), uniform(0, HEIGHT), len(flock) + 1))
+            boid = Boid(uniform(0, WIDTH), uniform(0, HEIGHT), len(flock) + 1)
+            flock.append(boid)
+            spatialHash.insert(boid)
+            
     elif boidCount < len(flock):
         while boidCount < len(flock):
             flock.pop()
 
-    quadTree = QuadTree(window.get_rect(), CAPACITY)
+    #quadTree = QuadTree(window.get_rect(), CAPACITY)
+    #for boid in flock:
+        #quadTree.insert(boid)
+    #spatialHash = SpatialHash(window, 16)
+    #for boid in flock:
+    #    spatialHash.insert(boid)
     for boid in flock:
-        quadTree.insert(boid)
-    for boid in flock:
-        boid.behaviour(quadTree, behaviourValues)
+        neighbours = spatialHash.getCollisions(boid)
+        #neighbours = quadTree.findInRect(boid.vRect)
+        boid.behaviour(neighbours, behaviourValues)
         boid.edges(avoidEdges, MARGIN, EDGE_TURN_FACTOR)
         boid.update(dragCoeff)
+        print(id(boid))
+        spatialHash.updateBoid(boid)
         boid.draw(window)
 
     uiWindow.setFps(str(int(clock.get_fps())))
-    uiWindow.draw(window, visibleUI, debugVisible, quadTree, flock)
+    uiWindow.draw(window, visibleUI, debugVisible, flock)
     pygame_widgets.update(events)
     pygame.display.update()
     pygame.display.flip()
