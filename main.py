@@ -51,7 +51,7 @@ while running:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 running = False
-            elif event.key == pygame.K_u:
+            elif event.key == pygame.K_SPACE:
                 visibleUI = not visibleUI
         if event.type == pygame.MOUSEBUTTONDOWN:
             spawn = True
@@ -88,6 +88,7 @@ while running:
         boid.update(dragCoeff)
         boid.draw(window)
 
+    uiWindow.setFps(str(int(clock.get_fps())))
     uiWindow.draw(window, visibleUI, debugVisible, quadTree, flock)
     pygame_widgets.update(events)
     pygame.display.update()

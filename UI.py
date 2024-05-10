@@ -6,10 +6,9 @@ initialSep = 2.0
 initialAlign = 0.55
 initialCoh = 0.25
 
-clock = pygame.time.Clock()
-
 class UI:
     def __init__(self, window, width, height):
+        self.fpsStr = "0"
         self.width = width
         self.height = height
         self.widgetSpacing = 50
@@ -91,8 +90,7 @@ class UI:
             if len(flock) != 0:
                 pygame.font.init()
                 font = pygame.font.SysFont(None, 24)
-                fpsStr = str(int(clock.get_fps()))
-                fps = font.render(fpsStr, True, (255, 255, 255))
+                fps = font.render(self.fpsStr, True, (255, 255, 255))
                 boidCountStr = str(len(flock))
                 boidCount = font.render(boidCountStr, True, (255, 255, 255))
                 window.blit(fps, (window.get_width() - 50, 50))
@@ -136,5 +134,6 @@ class UI:
             self.debugToggleVRect.hide()
             self.debugToggleQuadTree.hide()
             self.debugToggleParams.hide()
-    
 
+    def setFps(self, fps):
+        self.fpsStr = fps
