@@ -6,7 +6,7 @@ def matrix_multiplication(a, b):
     columns_b = len(b[0])
     rows_b = len(b)
     
-    result_matrix = [[0] * columns_b for _ in range(rows_a)]
+    result_matrix = [[j for j in range(columns_b)] for i in range(rows_a)]
     if columns_a == rows_b:
         for x in range(rows_a):
             for y in range(columns_b):

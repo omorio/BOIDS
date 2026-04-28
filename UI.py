@@ -5,9 +5,6 @@ from pygame_widgets.toggle import Toggle
 initialSep = 2.0
 initialAlign = 0.55
 initialCoh = 0.25
-initialVisionRadius = 60
-initialBoidCount = 1000
-initialDrag = 0.04
 
 class UI:
     def __init__(self, window, width, height):
@@ -29,11 +26,11 @@ class UI:
         self.sliderCoh = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing*3, self.rightPadding, 20, 
                                 min=0, max=1, step=0.01, initial = initialCoh)
         self.sliderRad = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing*4, self.rightPadding, 20,
-                                min=20, max=100, step=2, initial=initialVisionRadius)
-        self.sliderBoidCount = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing * 5, self.rightPadding, 20,
-                                min=0, max=5000, step=1, initial=initialBoidCount)
-        self.sliderDrag = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing * 6, self.rightPadding, 20,
-                                min=0, max=0.1, step=0.01, initial=initialDrag)
+                                min=20, max=100, step=2, initial=60)
+        self.sliderBoidCount = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing * 5, self.rightPadding, 20, 
+                                min=0, max=5000, step=1, initial=1000)
+        self.sliderDrag = Slider(window, self.rectMid, self.rect.y + self.widgetSpacing * 6, self.rightPadding, 20, 
+                                min=0, max=0.1, step=0.01, initial=0.04)
 
         self.font = pygame.font.SysFont(None, 24)
 
@@ -85,9 +82,9 @@ class UI:
         if self.debugToggleQuadTree.value:
             quadTree.draw(window)
 
-        if self.debugToggleVRect.value and flock:
+        if self.debugToggleVRect.value:
             pygame.draw.rect(window, "white", flock[-1].rect, 2)
-            pygame.draw.rect(window, "white", flock[-1].vRect, 2)
+            pygame.draw.rect(window, "white", flock[-1].vRect, 2)   
 
         if self.debugToggleParams.value:
             if len(flock) != 0:

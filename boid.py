@@ -6,27 +6,6 @@ from helpers import num_to_range, getDistance, SubVectors, makeBound,rotate_poin
 HEIGHT = 1964
 WIDTH = 3024
 
-# Behaviour scaling applied uniformly to all three steering forces
-BEHAVIOUR_SCALE = 0.8
-# Edge avoidance: proportional softening as a boid approaches the margin
-EDGE_APPROACH_SCALE = 0.05
-# Cohesion only activates beyond this fraction of the vision radius (avoids overcrowding)
-MIN_COHESION_DIVISOR = 4
-# Extra overlap buffer used by separation to detect near-collisions
-SEP_OVERLAP_BUFFER = 2
-# Vision radius adaptation
-MAX_VISION_RADIUS = 120
-MIN_VISION_RADIUS = 60
-VISION_ADJUST_STEP = 10
-VISION_BUDDY_MIN = 3   # fewer than this → expand vision
-VISION_BUDDY_MAX = 6   # more than this → shrink vision
-# Hue range mapped from velocity magnitude
-HUE_MIN = 100
-HUE_MAX = 360
-# HSV saturation and value for live boid colour
-COLOR_SAT = 115 / 255.0
-COLOR_VAL = 1.0
-
 class Boid:
     def __init__(self, x, y, boidID):
         self.position = pygame.Vector2(x, y)
@@ -42,9 +21,9 @@ class Boid:
         self.rect = pygame.Rect(self.position.x - self.radius / 2, self.position.y - self.radius / 2, self.radius, self.radius)
         self.neighbours = []
         self.boidID = boidID
-        self.colorID = randint(1, 8)
-        velToHue = num_to_range(self.velocity.magnitude(), 0, self.maxSpeed, 0, HUE_MAX)
-        self.color = colorsys.hsv_to_rgb(velToHue / HUE_MAX, COLOR_SAT, COLOR_VAL)
+        self.colorID = randint(5, 5)
+        velToHue = num_to_range(self.velocity.magnitude(),0,4,0,360)
+        self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 100 / 255.0, 100 / 255.0) #Need to normalize the colors
         self.color = (int (round (self.color[0] * 255)), int (self.color[1] * 255), int (self.color[2] * 255))
 
         if self.colorID == 1:
@@ -69,14 +48,14 @@ class Boid:
     ):  # Determines what happens when a boid reaches an edge of the window
         if avoid:
             if self.position.x < margin:
-                self.velocity.x += turnFactor * ((margin - self.position.x) * EDGE_APPROACH_SCALE)
+                self.velocity.x += turnFactor * ((margin - self.position.x) * 0.05)
             if self.position.y > HEIGHT - margin:
                 self.velocity.y += turnFactor * (
-                    (HEIGHT - margin - self.position.y) * EDGE_APPROACH_SCALE
+                    (HEIGHT - margin - self.position.y) * 0.05
                 )
             if self.position.x > WIDTH - margin:
                 self.velocity.x += turnFactor * (
-                    (WIDTH - margin - self.position.x) * EDGE_APPROACH_SCALE
+                    (WIDTH - margin - self.position.x) * 0.05
                 )
             if self.position.y < margin:
                 self.velocity.y += turnFactor * ((margin - self.position.y) * 0.05)
@@ -100,17 +79,18 @@ class Boid:
     def behaviour(self, quadTree, values):
         self.acceleration.update(0, 0)
         self.neighbours = quadTree.findInRect(self.vRect)
-        align = self.alignment(self.neighbours) * BEHAVIOUR_SCALE
-        align = align * values["alignment"]
-        self.acceleration += align
+        if not self.neighbours is None:
+            align = self.alignment(self.neighbours) * 0.8
+            align = align * values["alignment"]
+            self.acceleration += align
 
-        coh = self.cohesion(self.neighbours) * BEHAVIOUR_SCALE
-        coh = coh * values["cohesion"]
-        self.acceleration += coh
+            coh = self.cohesion(self.neighbours) * 0.8
+            coh = coh * values["cohesion"]
+            self.acceleration += coh
 
-        sep = self.separation(self.neighbours) * BEHAVIOUR_SCALE
-        sep = sep * values["separation"]
-        self.acceleration += sep
+            sep = self.separation(self.neighbours) * 0.8
+            sep = sep * values["separation"]
+            self.acceleration += sep
 
     def cohesion(self, neighbours):
         total = 0
@@ -118,7 +98,7 @@ class Boid:
 
         for buddy in neighbours:
             dist = getDistance(self.position, buddy.position)
-            if buddy is not self and self.vRadius/MIN_COHESION_DIVISOR < dist < self.vRadius and self.colorID == buddy.colorID:
+            if buddy is not self and self.vRadius/4 < dist < self.vRadius and self.colorID == buddy.colorID:
                 steering += buddy.position
 
                 total += 1
@@ -126,11 +106,11 @@ class Boid:
         if total > 0:
             steering = steering / total
             steering = steering - self.position
-            if steering.length_squared() > 0:
+            if len(steering) != 0 and (steering.x != 0 and steering.y != 0):
                 steering = steering.normalize()
             steering = steering * self.maxSpeed
             steering = steering - self.velocity
-            if steering.length_squared() > 0:
+            if len(steering) != 0 and (steering.x != 0 and steering.y != 0):
                 steering = steering.normalize()
 
         return steering
@@ -165,7 +145,7 @@ class Boid:
         for buddy in neighbours:
             dist = getDistance(self.position, buddy.position)
             if dist != 0:
-                if buddy is not self and dist < self.radius + SEP_OVERLAP_BUFFER:
+                if buddy is not self and dist < self.radius+2:
                     temp = SubVectors(self.position, buddy.position)
                     temp = temp / (dist**2)
                     steering += temp
@@ -180,24 +160,30 @@ class Boid:
             else:
                 steering = steering * self.maxSpeed
                 steering = steering - self.velocity
-                if steering.length_squared() > 0:
+                if len(steering) != 0 and (steering.x != 0 and steering.y != 0):
                     steering = steering.normalize()
 
         return steering
 
     def update(self, dragCoeff):
         # increases the boids vision if it cant see any flock members, decrease if it can see more than 3
-        buddyCount = 0
-        for boid in self.neighbours:
-            if self.colorID == boid.colorID:
-                buddyCount += 1
+        if not self.neighbours is None:
+            buddyCount = 0
+            for boid in self.neighbours: # pop all self.neighbours who are of the same flock and then get.
+                if self.colorID == boid.colorID:
+                    buddyCount += 1
 
-        if buddyCount <= VISION_BUDDY_MIN:
-            if self.vRadius < MAX_VISION_RADIUS:
-                self.vRadius += VISION_ADJUST_STEP
-        elif buddyCount > VISION_BUDDY_MAX:
-            if self.vRadius > MIN_VISION_RADIUS:
-                self.vRadius -= VISION_ADJUST_STEP
+            if buddyCount <= 3:
+                if self.vRadius < 120:
+                    self.vRadius += 10
+            elif buddyCount > 3 and buddyCount <= 6:
+                pass  # if the boid sees between 3 and 6 of his flock members it doesnt change its vision
+            else:
+                if self.vRadius > 60:
+                    self.vRadius -= 10
+        else:
+            if self.vRadius < 120:
+                self.vRadius += 10
 
         # update the possitional values of the boid
         self.velocity = pygame.Vector2(self.velocity.x * (1-dragCoeff), self.velocity.y * (1-dragCoeff))
@@ -206,8 +192,8 @@ class Boid:
         self.velocity = self.velocity.clamp_magnitude(self.minSpeed, self.maxSpeed)
 
         # Map velocity to hue of boid
-        velToHue = num_to_range(self.velocity.magnitude(), 0, self.maxSpeed, HUE_MIN, HUE_MAX)
-        self.color = colorsys.hsv_to_rgb(velToHue / HUE_MAX, COLOR_SAT, COLOR_VAL)
+        velToHue = num_to_range(self.velocity.magnitude(), 0, self.maxSpeed, 100, 360)
+        self.color = colorsys.hsv_to_rgb(velToHue / 360.0, 115 / 255.0, 255 / 255.0) # Need to normalize the colors
         self.color = (int (round (self.color[0] * 255)), int (round (self.color[1] * 255)), int (round (self.color[2] * 255)))
 
         self.vRect = pygame.Rect(
