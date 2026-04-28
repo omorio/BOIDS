@@ -1,6 +1,9 @@
 from math import sqrt, atan2
 import pygame
 
+width = 1080+400 #2048 
+height = 720+130 #1080
+
 def getDistance(v1, v2): # recieves two vectors and finds the distance between them.
 	return sqrt((v1.x - v2.x)**2 + (v1.y - v2.y)**2)
 
@@ -8,7 +11,7 @@ def SubVectors(v1, v2): #recieve two vectors and substract them.
 	return pygame.Vector2(v1.x - v2.x, v1.y - v2.y)
 
 def dotProduct(v1, v2):
-	return v1.x * v2.x + v1.y * v2.y
+	return v1.angle_to(v2)
 
 
 def makeBound(x, lower, upper):
@@ -19,12 +22,12 @@ def makeBound(x, lower, upper):
 	else:
 		return x
 
-def mouseInBound(rect, pos, height):
+def mouseInBound(rect, pos):
 	x, y = pos
 	if x > 0 and x < rect.x:
 		if y > 0 and y < height:
 			return True
-		else:
+		else: 
 			return False
 	elif x > rect.x:
 		if y < rect.y:
@@ -33,7 +36,7 @@ def mouseInBound(rect, pos, height):
 			return True
 		else:
 			return False
-	else:
+	else: 
 		return False
 
 def rotate_points_around_pivot(points, pivot, angle):
@@ -43,9 +46,8 @@ def rotate_points_around_pivot(points, pivot, angle):
     return rotated_points
 
 def num_to_range(num, inMin, inMax, outMin, outMax):
-	if inMin == inMax:
-		return outMin
-	return outMin + (float(num - inMin) / float(inMax - inMin) * (outMax - outMin))
+	return outMin + (float(num - inMin) / float(inMax - inMin) * (outMax
+			- outMin))
 
 class Vec:
 	def __init__(self, x=0, y=0):
@@ -92,9 +94,8 @@ class Vec:
 
 	def normalize(self):
 		mag = self.magnitude()
-		if mag != 0:
-			self.x /= mag
-			self.y /= mag
+		if not (mag == 0 ):
+			self = self/mag
 	def Normalize(self):
 		mag = self.magnitude()
 		if mag != 0:
