@@ -6,94 +6,91 @@ from boid import Boid, WIDTH, HEIGHT
 from helpers import mouseInBound
 from pointQuadTree2 import QuadTree
 
-# Ideas: implement vision cone instead of the vision being a square.
-# Ideas: Add toggle for grouping of boids.
-
-# Disables constant should be UPPER_CASE message
-# pylint: disable=C0103
-
 MARGIN = 20
 CAPACITY = 8
 EDGE_TURN_FACTOR = 0.6
-flock = []
-spawn = False
-running = True
-visibleUI = True
-avoidEdges = True
-buttonClick = False
 
-pygame.init()
-clock = pygame.time.Clock()
-window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-quadTree = QuadTree(window.get_rect(), CAPACITY)
-uiWindow = UI(window, WIDTH, HEIGHT)
 
-while running:
-    # wipe away anything from last frame
-    window.fill((15, 15, 15))
+class Simulation:
+    def __init__(self):
+        self.flock = []
+        self.spawn = False
+        self.running = True
+        self.visibleUI = True
+        self.avoidEdges = True
 
-    sep = uiWindow.sliderSep.getValue()
-    align = uiWindow.sliderAlign.getValue()
-    coh = uiWindow.sliderCoh.getValue()
-    vRad = uiWindow.sliderRad.getValue()
-    boidCount = uiWindow.sliderBoidCount.getValue()
-    dragCoeff = uiWindow.sliderDrag.getValue()
-    behaviourValues = {"separation": sep, "alignment": align, "cohesion": coh, "drag": dragCoeff}
-    avoidEdges = uiWindow.edgesToggle.getValue()
-    debugVisible = uiWindow.debugToggle.getValue()
+        pygame.init()
+        self.clock = pygame.time.Clock()
+        self.window = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+        self.quadTree = QuadTree(self.window.get_rect(), CAPACITY)
+        self.uiWindow = UI(self.window, WIDTH, HEIGHT)
 
-    # Poll for events.
-    # Press the space bar to hide the UI
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                running = False
-            elif event.key == pygame.K_SPACE:
-                visibleUI = not visibleUI
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            spawn = True
-        if event.type == pygame.MOUSEBUTTONUP:
-            spawn = False
-        if spawn:
-            if visibleUI:
+    def run(self):
+        while self.running:
+            self._update()
+        pygame.quit()
+
+    def _handle_events(self, events, boidCount):
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.running = False
+                elif event.key == pygame.K_SPACE:
+                    self.visibleUI = not self.visibleUI
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.spawn = True
+            if event.type == pygame.MOUSEBUTTONUP:
+                self.spawn = False
+            if self.spawn:
                 pos = pygame.mouse.get_pos()
-                if mouseInBound(uiWindow.rect, pos):
-                    boid = Boid(pos[0], pos[1], len(flock) + 1)
-                    flock.append(boid)
-                    quadTree.insert(boid)
-                    uiWindow.sliderBoidCount.setValue(boidCount + 1)
-            else:
-                pos = pygame.mouse.get_pos()
-                boid = Boid(pos[0], pos[1], len(flock) + 1)
-                flock.append(boid)
-                quadTree.insert(boid)
-                uiWindow.sliderBoidCount.setValue(boidCount + 1)
+                if self.visibleUI and not mouseInBound(self.uiWindow.rect, pos, HEIGHT):
+                    return
+                boid = Boid(pos[0], pos[1], len(self.flock) + 1)
+                self.flock.append(boid)
+                self.quadTree.insert(boid)
+                self.uiWindow.sliderBoidCount.setValue(boidCount + 1)
 
-    if boidCount > len(flock):
-        while boidCount > len(flock):
-            flock.append(Boid(uniform(0, WIDTH), uniform(0, HEIGHT), len(flock) + 1))
-    elif boidCount < len(flock):
-        while boidCount < len(flock):
-            flock.pop()
+    def _sync_flock_count(self, boidCount):
+        while boidCount > len(self.flock):
+            self.flock.append(Boid(uniform(0, WIDTH), uniform(0, HEIGHT), len(self.flock) + 1))
+        while boidCount < len(self.flock):
+            self.flock.pop()
 
-    quadTree = QuadTree(window.get_rect(), CAPACITY)
-    for boid in flock:
-        quadTree.insert(boid)
-    for boid in flock:
-        boid.behaviour(quadTree, behaviourValues)
-        boid.edges(avoidEdges, MARGIN, EDGE_TURN_FACTOR)
-        boid.update(dragCoeff)
-        boid.draw(window)
+    def _update(self):
+        self.window.fill((15, 15, 15))
 
-    uiWindow.setFps(str(int(clock.get_fps())))
-    uiWindow.draw(window, visibleUI, debugVisible, quadTree, flock)
-    pygame_widgets.update(events)
-    pygame.display.update()
-    pygame.display.flip()
+        sep = self.uiWindow.sliderSep.getValue()
+        align = self.uiWindow.sliderAlign.getValue()
+        coh = self.uiWindow.sliderCoh.getValue()
+        dragCoeff = self.uiWindow.sliderDrag.getValue()
+        boidCount = self.uiWindow.sliderBoidCount.getValue()
+        behaviourValues = {"separation": sep, "alignment": align, "cohesion": coh, "drag": dragCoeff}
+        self.avoidEdges = self.uiWindow.edgesToggle.getValue()
+        debugVisible = self.uiWindow.debugToggle.getValue()
 
-    clock.tick(60)  # limits FPS to 60
+        events = pygame.event.get()
+        self._handle_events(events, boidCount)
+        self._sync_flock_count(boidCount)
 
-pygame.quit()
+        self.quadTree.clear()
+        for boid in self.flock:
+            self.quadTree.insert(boid)
+        for boid in self.flock:
+            boid.behaviour(self.quadTree, behaviourValues)
+            boid.edges(self.avoidEdges, MARGIN, EDGE_TURN_FACTOR)
+            boid.update(dragCoeff)
+            boid.draw(self.window)
+
+        self.uiWindow.setFps(str(int(self.clock.get_fps())))
+        self.uiWindow.draw(self.window, self.visibleUI, debugVisible, self.quadTree, self.flock)
+        pygame_widgets.update(events)
+        pygame.display.update()
+        pygame.display.flip()
+
+        self.clock.tick(60)
+
+
+if __name__ == "__main__":
+    Simulation().run()

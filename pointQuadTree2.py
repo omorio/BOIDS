@@ -48,7 +48,7 @@ class QuadTree():
         if found is None:
             found = []
         if not rect.colliderect(self.boundary):
-            return None
+            return found
         else:
             for boid in self.items:
                 if rect.colliderect(boid.rect):
@@ -59,6 +59,14 @@ class QuadTree():
                 self.seQT.findInRect(rect, found)
                 self.swQT.findInRect(rect, found)
         return found
+
+    def clear(self):
+        self.items = []
+        self.split = False
+        self.neQT = None
+        self.nwQT = None
+        self.seQT = None
+        self.swQT = None
 
     def draw(self, window, color=(128,128,128)):
         pygame.draw.rect(window, color, self.boundary, 1)
